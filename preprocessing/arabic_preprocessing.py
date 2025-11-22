@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 class ArabicPreprocessor(Preprocessor):
     def __init__(self, text):
         super().__init__(text)
-        self.split_punct = {".", ",", "،", "؛", ":", "?", "؟", "«", "»"}
+        self.split_punct = { ",",".", "،",  ":", "?", "؟","؛", "«", "»"}
 
     def remove_html_tags(self):
         self.text = BeautifulSoup(self.text, "html.parser").get_text("")
@@ -45,4 +45,12 @@ class ArabicPreprocessor(Preprocessor):
         self.text = re.sub(f"[{re.escape(unwanted_punct)}]", "", self.text)
 
     def apply(self):
-       pass
+       self.remove_html_tags()
+       self.remove_urls()
+       self.remove_english_characters()
+       self.remove_numbers()
+       self.remove_kashida()
+       self.solve_diacritics_issues()
+       self.remove_punctuation()
+       self.remove_extra_spaces()
+       return self.text
