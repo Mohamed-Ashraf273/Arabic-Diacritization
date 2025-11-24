@@ -3,17 +3,33 @@ import re
 import string
 from bs4 import BeautifulSoup
 
-def remove_diacritics(text):
-    with open("utils/diacritics.pickle", "rb") as f:
-        diacritics_set = pickle.load(f)
-    print("Loaded diacritics:", diacritics_set)
-    diacritics_chars = "".join(list(diacritics_set))
-    print(f"\nDiacritics as string: {diacritics_chars}")
-    diacritics_pattern = f"[{re.escape(diacritics_chars)}]"
-    return re.sub(diacritics_pattern, '', text)
+def separate_diacritics(text, diacritic2idx):
+    base_chars = []
+    char_diacritics = []
+    
+    i = 0
+    while i < len(text):
+        char = text[i]
+        
+        diacritic = ''
+        j = i + 1
+        while j < len(text) and text[j] in diacritic2idx:
+            diacritic += text[j]
+            j += 1
+        
+        base_chars.append(char)
+        char_diacritics.append(diacritic)
+        i = j
+    
+    return base_chars, char_diacritics
 
-def preprocess(text):
-    split_punct = {",", ".", "،", ":", "?", "؟", "؛", "«", "»"}
+def preprocess(text, diacritics_chars):
+    controls_to_remove = {'\u200f', '\u200e', '\u200b', '\u200c', '\u200d', 
+                         '\u202a', '\u202b', '\u202c', '\u202d', '\u202e',  '–', '–', '‒', '‐'}
+    
+    text = ''.join([char for char in text if char not in controls_to_remove])
+    
+    split_punct = {",", ".", "،", ":", "?", "؟", "؛", "«", "»", "،"}
     
     text = BeautifulSoup(text, "html.parser").get_text("")
     
@@ -26,9 +42,6 @@ def preprocess(text):
     
     text = re.sub(r"ـ+", "", text)
     
-    with open("utils/diacritics.pickle", "rb") as f:
-        diacritics_chars = "".join(list(pickle.load(f)))
-        
     text = re.sub(rf"\s+([{diacritics_chars}])", r"\1", text)
     text = re.sub(f"({diacritics_chars})\\1+", r"\1", text)
     
