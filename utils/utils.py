@@ -1,14 +1,13 @@
 import pickle
 import re
 import string
+from pathlib import Path
 
 import pickle
 import re
-import numpy as np
 
 from utils.data_loader import DiacritizationDataset
 from torch.utils.data import DataLoader
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 from bs4 import BeautifulSoup
 
 def separate_diacritics(text, diacritic2idx):
@@ -67,7 +66,10 @@ def create_data_pipeline(corpus_path, letter2idx, diacritic2idx, collate_fn, tra
     with open(corpus_path, 'r', encoding='utf-8') as f:
         data = f.read()
 
-    with open('utils/diacritics.pickle', 'rb') as f:
+    utils_dir = Path(__file__).parent
+    diacritics_path = utils_dir / 'diacritics.pickle'
+    
+    with open(diacritics_path, 'rb') as f:
         diacritics_chars = pickle.load(f)
 
     cleaned_data = preprocess(data, diacritics_chars)
