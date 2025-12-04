@@ -1,6 +1,14 @@
 import pickle
 import re
 import string
+
+import pickle
+import re
+import numpy as np
+
+from utils.data_loader import DiacritizationDataset
+from torch.utils.data import DataLoader
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 from bs4 import BeautifulSoup
 
 def separate_diacritics(text, diacritic2idx):
@@ -52,3 +60,35 @@ def preprocess(text, diacritics_chars):
     text = "\n".join([line.strip() for line in text.split("\n")])
     
     return text
+
+def create_data_pipeline(corpus_path, letter2idx, diacritic2idx, collate_fn, train=True, batch_size=32):
+    assert corpus_path.endswith(".txt"), "Corpus file must be a .txt file"
+
+    with open(corpus_path, 'r', encoding='utf-8') as f:
+        data = f.read()
+
+    with open('utils/diacritics.pickle', 'rb') as f:
+        diacritics_chars = pickle.load(f)
+
+    cleaned_data = preprocess(data, diacritics_chars)
+    split_punct = {",", ".", "،", ":", "?", "؟", "؛", "«", "»", "،", "\n"}
+    sentences = re.split(f"[{re.escape(''.join(split_punct))}]", cleaned_data)
+    sentences = list(filter(lambda s: s.strip(), sentences))
+
+    X = []
+    y = []
+
+    for sentence in sentences:
+        chars, diacritics = separate_diacritics(sentence.strip(), diacritic2idx)
+        X.append([letter2idx[char] for char in chars])
+        y.append([diacritic2idx[diacritic] for diacritic in diacritics])
+
+    dataset = DiacritizationDataset(X, y, letter2idx=letter2idx)
+    data_loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=train,
+        collate_fn=collate_fn
+    )
+
+    return dataset, data_loader

@@ -15,8 +15,33 @@ class BLSTM(nn.Module):
 
         self.fc = nn.Linear(hidden_size * 2, num_classes)
 
-    def forward(self, x):
-        x = self.embedding(x)
-        x, _ = self.bilstm(x) 
-        x = self.fc(x)
-        return x
+    def forward(self, x, lengths=None):
+        x_emb = self.embedding(x)
+        
+        if lengths is not None:
+            lengths_sorted, sorted_idx = lengths.sort(descending=True)
+            x_sorted = x_emb[sorted_idx]
+            
+            x_packed = nn.utils.rnn.pack_padded_sequence(
+                x_sorted, 
+                lengths_sorted.cpu(), 
+                batch_first=True, 
+                enforce_sorted=True
+            )
+            
+            lstm_packed, _ = self.bilstm(x_packed)
+            
+            lstm_out, _ = nn.utils.rnn.pad_packed_sequence(
+                lstm_packed, 
+                batch_first=True,
+                padding_value=0.0,
+                total_length=x_emb.size(1)
+            )
+            
+            _, unsorted_idx = sorted_idx.sort()
+            lstm_out = lstm_out[unsorted_idx]
+        else:
+            lstm_out, _ = self.bilstm(x_emb)
+        
+        out = self.fc(lstm_out)
+        return out
