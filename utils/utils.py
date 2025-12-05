@@ -60,7 +60,9 @@ def preprocess(text, diacritics_chars):
     
     return text
 
-def create_data_pipeline(corpus_path, letter2idx, diacritic2idx, collate_fn, train=True, batch_size=32):
+def create_data_pipeline(corpus_path, letter2idx, diacritic2idx, collate_fn, train=True, 
+                        batch_size=32, bow_vectorizer=None, window_size=3):
+    
     assert corpus_path.endswith(".txt"), "Corpus file must be a .txt file"
 
     with open(corpus_path, 'r', encoding='utf-8') as f:
@@ -79,13 +81,27 @@ def create_data_pipeline(corpus_path, letter2idx, diacritic2idx, collate_fn, tra
 
     X = []
     y = []
+    X_chars = []
 
     for sentence in sentences:
         chars, diacritics = separate_diacritics(sentence.strip(), diacritic2idx)
         X.append([letter2idx[char] for char in chars])
         y.append([diacritic2idx[diacritic] for diacritic in diacritics])
+        if bow_vectorizer is not None:
+            X_chars.append(chars)
 
-    dataset = DiacritizationDataset(X, y, letter2idx=letter2idx)
+    if bow_vectorizer is not None:
+        from utils.data_loader import BOWDiacritizationDataset
+        
+        if train and bow_vectorizer.vectorizer is None:
+            bow_vectorizer.fit(X_chars)
+        
+        dataset = BOWDiacritizationDataset(
+            X, y, bow_vectorizer, letter2idx, window_size=window_size
+        )
+    else:
+        dataset = DiacritizationDataset(X, y, letter2idx=letter2idx)
+    
     data_loader = DataLoader(
         dataset,
         batch_size=batch_size,
@@ -93,4 +109,7 @@ def create_data_pipeline(corpus_path, letter2idx, diacritic2idx, collate_fn, tra
         collate_fn=collate_fn
     )
 
-    return dataset, data_loader
+    if bow_vectorizer is not None:
+        return dataset, data_loader, bow_vectorizer
+    else:
+        return dataset, data_loader
