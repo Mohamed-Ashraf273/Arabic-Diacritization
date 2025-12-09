@@ -61,7 +61,7 @@ def preprocess(text, diacritics_chars):
     return text
 
 def create_data_pipeline(corpus_path, letter2idx, diacritic2idx, collate_fn, train=True, 
-                        batch_size=32, bow_vectorizer=None, window_size=3):
+                        batch_size=32, bow_vectorizer=None, window_size=3, max_length=512, min_length=3):
     
     assert corpus_path.endswith(".txt"), "Corpus file must be a .txt file"
 
@@ -85,6 +85,14 @@ def create_data_pipeline(corpus_path, letter2idx, diacritic2idx, collate_fn, tra
 
     for sentence in sentences:
         chars, diacritics = separate_diacritics(sentence.strip(), diacritic2idx)
+        
+        if len(chars) < min_length:
+            continue
+        
+        if len(chars) > max_length:
+            chars = chars[:max_length]
+            diacritics = diacritics[:max_length]
+        
         X.append([letter2idx[char] for char in chars])
         y.append([diacritic2idx[diacritic] for diacritic in diacritics])
         if bow_vectorizer is not None:
