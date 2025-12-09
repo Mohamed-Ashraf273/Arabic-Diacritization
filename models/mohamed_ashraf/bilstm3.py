@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class BiLSTM(nn.Module):
-    def __init__(self, vocab_size, num_classes, embedding_dim=256, hidden_size=256, num_layers=2, dropout=0.3):
+    def __init__(self, vocab_size, num_classes, embedding_dim=256, hidden_size=256, num_layers=3, dropout=0.2):
         super().__init__()
         
         self.embedding = nn.Embedding(vocab_size, embedding_dim, padding_idx=13)
